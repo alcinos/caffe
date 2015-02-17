@@ -365,8 +365,12 @@ void Solver<Dtype>::Snapshot(const char* filename)
 
 }
 
+
 template <typename Dtype>
 void Solver<Dtype>::Snapshot() {
+  NetParameter net_param;
+  // For intermediate results, we will also dump the gradient values.
+  net_->ToProto(&net_param, param_.snapshot_diff());
   string filename(param_.snapshot_prefix());
   string model_filename, snapshot_filename;
   const int kBufferSize = 20;
@@ -484,7 +488,6 @@ void SGDSolver<Dtype>::ClipGradients() {
     }
   }
 }
-
 template <typename Dtype>
 void SGDSolver<Dtype>::ApplyUpdate() {
   Dtype rate = GetLearningRate();
@@ -707,6 +710,10 @@ template <typename Dtype>
 void AdaGradSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
   const vector<float>& net_params_lr = this->net_->params_lr();
+  const vector<float>& net_params_weight_decay =
+      this->net_->params_weight_decay();
+  // get the learning rate
+  Dtype rate = this->GetLearningRate();
   Dtype delta = this->param_.delta();
   Dtype local_rate = rate * net_params_lr[param_id];
   switch (Caffe::mode()) {
@@ -781,6 +788,26 @@ void AdaGradSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   }
 }
 
+
+template <typename Dtype>
+void RMSpropSolver<Dtype>::PreSolveRMS() {
+  // Initialize the history
+  const vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
+  history_rms_.clear();
+  update_rms_.clear();
+
+  for (int i = 0; i < net_params.size(); ++i) {
+    const Blob<Dtype>* net_param = net_params[i].get();
+    history_rms_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(
+            net_param->num(), net_param->channels(), net_param->height(),
+            net_param->width())));
+    update_rms_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(
+            net_param->num(), net_param->channels(), net_param->height(),
+            net_param->width())));
+  }
+}
+
+
 template <typename Dtype>
 void RMSpropSolver<Dtype>::ComputeUpdateValue() {
   const vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
@@ -838,7 +865,7 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
       // compute RMS history update
       caffe_cpu_axpby(net_params[param_id] -> count(),
     		   (1-rms_decay), this->update_[param_id]->cpu_data(),
-			   rms_decay, this->history_rms_[param_id]-> mutable_cpu_data());
+			   rms_decay, this->history_[param_id]-> mutable_cpu_data());
 
 
       // prepare update
@@ -914,12 +941,13 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
       // update history
 	  caffe_gpu_axpby(net_params[param_id] -> count(),
 	  		   (1-rms_decay), this->update_rms_[param_id]->gpu_data(),
-	  		   rms_decay, this->history_rms_[param_id]-> mutable_gpu_data());
+	  		   rms_decay, history_rms_[param_id]-> mutable_gpu_data());
 
       // prepare update
       caffe_gpu_powx(net_params[param_id]->count(),
                 this->history_rms_[param_id]->gpu_data(), Dtype(0.5),
                 this->update_rms_[param_id]->mutable_gpu_data());
+
 
       caffe_gpu_add_scalar(net_params[param_id]->count(),
                 delta, this->update_rms_[param_id]->mutable_gpu_data());
@@ -929,28 +957,32 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
                 this->update_rms_[param_id]->gpu_data(),
                 this->update_rms_[param_id]->mutable_gpu_data());
 
-      // scale and copy
-      caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
-          this->update_rms_[param_id]->gpu_data(), Dtype(0),
-          net_params[param_id]->mutable_gpu_diff());
 
       // Momentum step
       if(momentum > 0){
-		  // update history
-		  caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
-					 net_params[param_id]->gpu_diff(), momentum,
-					 this->history_[param_id]->mutable_gpu_data());
+    	  // update history
+		  caffe_gpu_axpby(net_params[param_id]->count(), -local_rate,
+				  net_params[param_id]->gpu_diff(), momentum,
+				  this->history_[param_id]->mutable_gpu_data());
 
-		  // compute udpate: step back then over step
-		  caffe_gpu_axpby(net_params[param_id]->count(), Dtype(1) + momentum,
-			   this->history_[param_id]->gpu_data(), -momentum,
-			   this->update_[param_id]->mutable_gpu_data());
+		  // compute update: step back then over step
+		  caffe_gpu_axpby(net_params[param_id]->count(),momentum,
+			this->history_[param_id]->gpu_data(), Dtype(0),
+			this->update_[param_id]->mutable_gpu_data());
 
 		  // copy
-		  caffe_gpu_axpby(net_params[param_id]->count(),
-			   Dtype(1.0),this->update_[param_id]->gpu_data(),
-			   Dtype(1.0),net_params[param_id]->mutable_gpu_diff());
+		  caffe_copy(net_params[param_id]->count(),
+			this->update_[param_id]->gpu_data(),
+			net_params[param_id]->mutable_gpu_diff());
 
+		  caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
+		  			 this->update_rms_[param_id]->gpu_data(), Dtype(0),
+		  			 net_params[param_id]->mutable_gpu_diff());
+       }else{
+    	   // scale and copy
+    	   caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
+    	   		 this->update_rms_[param_id]->gpu_data(), Dtype(0),
+    	   		 net_params[param_id]->mutable_gpu_diff());
        }
     }
 #else
