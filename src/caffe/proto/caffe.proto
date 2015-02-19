@@ -198,7 +198,7 @@ message SolverParameter {
   optional float delta = 31 [default = 1e-8];
   
   //RMSprop decay value
-  optional float rms_decay = 37 [default = 0.99];
+  optional float rms_decay = 37;
 
   // If true, print information about the state of the net that may help with
   // debugging learning problems.
@@ -532,6 +532,7 @@ message EltwiseParameter {
   optional bool stable_prod_grad = 3 [default = true];
 }
 
+// Message that stores parameters used by ExpLayer
 message ExpParameter {
   // ExpLayer computes outputs y = base ^ (shift + scale * x), for base > 0.
   // Or if base is set to the default (-1), base is set to e,
@@ -869,6 +870,7 @@ message ThresholdParameter {
   optional float threshold = 1 [default = 0]; // Strictly positive values
 }
 
+// Message that stores parameters used by WindowDataLayer
 message WindowDataParameter {
   // Specify the data source.
   optional string source = 1;
