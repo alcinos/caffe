@@ -170,7 +170,7 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 	ifeq ($(FFT), 1)
 		LIBRARIES += cufft
-        endif     
+    endif     
 endif
 
 LIBRARIES += glog gflags protobuf leveldb snappy \
@@ -231,12 +231,12 @@ endif
 ifeq ($(LINUX), 1)
 	CXX ?= /usr/bin/g++
 	GCCVERSION := $(shell $(CXX) -dumpversion | cut -f1,2 -d.)
-	# older versions of gcc are too dumb to build boost with -Wuninitalized
+    # older versions of gcc are too dumb to build boost with -Wuninitalized
 	ifeq ($(shell echo $(GCCVERSION) \< 4.6 | bc), 1)
 		WARNINGS += -Wno-uninitialized
 	endif
-	# boost::thread is reasonably called boost_thread (compare OS X)
-	# We will also explicitly add stdc++ to the link target.
+    # boost::thread is reasonably called boost_thread (compare OS X)
+    # We will also explicitly add stdc++ to the link target.
 	LIBRARIES += boost_thread stdc++
 endif
 
@@ -251,14 +251,14 @@ ifeq ($(OSX), 1)
 			CXXFLAGS += -stdlib=libstdc++
 			LINKFLAGS += -stdlib=libstdc++
 		endif
-		# clang throws this warning for cuda headers
+	    # clang throws this warning for cuda headers
 		WARNINGS += -Wno-unneeded-internal-declaration
 	endif
-	# gtest needs to use its own tuple to not conflict with clang
+    # gtest needs to use its own tuple to not conflict with clang
 	COMMON_FLAGS += -DGTEST_USE_OWN_TR1_TUPLE=1
-	# boost::thread is called boost_thread-mt to mark multithreading on OS X
+    # boost::thread is called boost_thread-mt to mark multithreading on OS X
 	LIBRARIES += boost_thread-mt
-	# we need to explicitly ask for the rpath to be obeyed
+    # we need to explicitly ask for the rpath to be obeyed
 	DYNAMIC_FLAGS := -install_name @rpath/libcaffe.so
 	ORIGIN := @loader_path
 else
@@ -313,26 +313,26 @@ endif
 # BLAS configuration (default = ATLAS)
 BLAS ?= atlas
 ifeq ($(BLAS), mkl)
-	# MKL
+    # MKL
 	LIBRARIES += mkl_rt
 	COMMON_FLAGS += -DUSE_MKL
 	MKL_DIR ?= /opt/intel/mkl
 	BLAS_INCLUDE ?= $(MKL_DIR)/include
 	BLAS_LIB ?= $(MKL_DIR)/lib $(MKL_DIR)/lib/intel64
 else ifeq ($(BLAS), open)
-	# OpenBLAS
+    # OpenBLAS
 	LIBRARIES += openblas
 else
-	# ATLAS
+    # ATLAS
 	ifeq ($(LINUX), 1)
 		ifeq ($(BLAS), atlas)
-			# Linux simply has cblas and atlas
+	        # Linux simply has cblas and atlas
 			LIBRARIES += cblas atlas
 		endif
 	else ifeq ($(OSX), 1)
-		# OS X packages atlas as the vecLib framework
+	    # OS X packages atlas as the vecLib framework
 		LIBRARIES += cblas
-		# 10.10 has accelerate while 10.9 has veclib
+	    # 10.10 has accelerate while 10.9 has veclib
 		XCODE_CLT_VER := $(shell pkgutil --pkg-info=com.apple.pkg.CLTools_Executables | grep -o 'version: 6')
 		ifneq (,$(findstring version: 6,$(XCODE_CLT_VER)))
 			BLAS_INCLUDE ?= /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Headers/
@@ -492,7 +492,7 @@ runtest: $(TEST_ALL_BIN)
 
 pytest: py
 	cd python; python -m unittest discover -s caffe/test
-	
+
 mattest: mat
 	cd matlab; $(MATLAB_DIR)/bin/matlab -nodisplay -r 'caffe.run_tests(), exit()'
 
