@@ -343,31 +343,37 @@ void Solver<Dtype>::Test(const int test_net_id) {
     LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
         << mean_score << loss_msg_stream.str();
   }
-}
+}  
 
+template< typename Dtype>
+void Solver<Dtype>::Snapshot(const char* filename)
+{
+    string model_filename = string(filename) + ".caffemodel";
+    string snapshot_filename = string(filename) + ".solverstate";
+    NetParameter net_param;
+    // For intermediate results, we will also dump the gradient values.
+    net_->ToProto(&net_param, param_.snapshot_diff());
+    LOG(INFO) << "Snapshotting to " << model_filename;
+    WriteProtoToBinaryFile(net_param, model_filename.c_str());
+    SolverState state;
+    SnapshotSolverState(&state);
+    state.set_iter(iter_);
+    state.set_learned_net(model_filename);
+    state.set_current_step(current_step_);
+    LOG(INFO) << "Snapshotting solver state to " << snapshot_filename;
+    WriteProtoToBinaryFile(state, snapshot_filename.c_str());
+
+}
 
 template <typename Dtype>
 void Solver<Dtype>::Snapshot() {
-  NetParameter net_param;
-  // For intermediate results, we will also dump the gradient values.
-  net_->ToProto(&net_param, param_.snapshot_diff());
   string filename(param_.snapshot_prefix());
   string model_filename, snapshot_filename;
   const int kBufferSize = 20;
   char iter_str_buffer[kBufferSize];
   snprintf(iter_str_buffer, kBufferSize, "_iter_%d", iter_);
   filename += iter_str_buffer;
-  model_filename = filename + ".caffemodel";
-  LOG(INFO) << "Snapshotting to " << model_filename;
-  WriteProtoToBinaryFile(net_param, model_filename.c_str());
-  SolverState state;
-  SnapshotSolverState(&state);
-  state.set_iter(iter_);
-  state.set_learned_net(model_filename);
-  state.set_current_step(current_step_);
-  snapshot_filename = filename + ".solverstate";
-  LOG(INFO) << "Snapshotting solver state to " << snapshot_filename;
-  WriteProtoToBinaryFile(state, snapshot_filename.c_str());
+  Snapshot(filename.c_str());
 }
 
 template <typename Dtype>

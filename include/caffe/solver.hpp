@@ -31,6 +31,7 @@ class Solver {
   // previously snapshotted state. You should implement the RestoreSolverState()
   // function that restores the state from a SolverState protocol buffer.
   void Restore(const char* resume_file);
+  void Snapshot(const char* save_file);
   virtual ~Solver() {}
   inline shared_ptr<Net<Dtype> > net() { return net_; }
   inline const vector<shared_ptr<Net<Dtype> > >& test_nets() {
