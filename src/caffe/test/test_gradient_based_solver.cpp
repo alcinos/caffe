@@ -23,7 +23,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
 
  protected:
   GradientBasedSolverTest() :
-      seed_(1701), num_(4), channels_(3), height_(10), width_(10) {}
+      seed_(1701), num_(5), channels_(3), height_(10), width_(10) {}
 
   shared_ptr<SGDSolver<Dtype> > solver_;
   int seed_;
@@ -78,10 +78,6 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
        "      channels: 1 "
        "      height: 1 "
        "      width: 1 "
-       "      data_filler { "
-       "        type: 'constant' "
-       "        value: 1.0 "
-       "      } "
        "      data_filler { "
        "        type: 'gaussian' "
        "        std: 1.0 "
@@ -188,9 +184,11 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
           grad += element * weights.cpu_data()[j];
         }
       }
+      cout<<"data ";
       for (int k = 0; k < N; ++k) {
         const Dtype element_i = (i == D) ? 1 : data.cpu_data()[k * D + i];
         grad -= element_i * targets.cpu_data()[k];
+        cout<<element_i<<" "<<targets.cpu_data()[k]<<"    ";
       }
       // Scale the gradient over the N samples.
       grad /= N;
@@ -230,6 +228,9 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
         updated_weights.mutable_cpu_data()[i] =
             weights.cpu_data()[i] - update_value;
       }
+      cout<<"grad"<<grad<<endl;
+      cout<<"update "<<update_value<<endl;
+      //throw 2;
     }
   }
 
@@ -249,6 +250,10 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
     ASSERT_EQ(D, solver_updated_weights.count());
     const double kPrecision = 1e-2;
     const double kMinPrecision = 1e-7;
+    for (int i = 0; i < D; ++i) {
+        cout<<updated_weights.cpu_data()[i]<<" "<<solver_updated_weights.cpu_data()[i]<<endl;
+    }
+    //throw 2;
     for (int i = 0; i < D; ++i) {
       const Dtype expected_updated_weight = updated_weights.cpu_data()[i];
       const Dtype solver_updated_weight = solver_updated_weights.cpu_data()[i];
@@ -284,11 +289,11 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
   }
 
   void CheckAccumulation(const Dtype kLearningRate, const Dtype kWeightDecay,
-      const Dtype kMomentum, const int kNumIters, const int kIterSize) {
+                         const Dtype kMomentum, const int kNumIters, const Dtype kRMSDecay, const int kIterSize) {
     const double kPrecision = 1e-2;
     const double kMinPrecision = 1e-7;
     // Solve without accumulation and save parameters.
-    this->RunLeastSquaresSolver(kLearningRate, kWeightDecay, kMomentum,
+    this->RunLeastSquaresSolver(kLearningRate, kWeightDecay, kMomentum, kRMSDecay,
         kNumIters);
     // Save parameters for comparison.
     Net<Dtype>& net = *this->solver_->net();
@@ -300,7 +305,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
       noaccum_params[i]->CopyFrom(*param_blobs[i], false, true);
     }
     // Solve by equivalent accumulation of gradients over divided batches.
-    this->RunLeastSquaresSolver(kLearningRate, kWeightDecay, kMomentum,
+    this->RunLeastSquaresSolver(kLearningRate, kWeightDecay, kMomentum, kRMSDecay,
         kNumIters, kIterSize);
     Net<Dtype>& net_accum = *this->solver_->net();
     const vector<shared_ptr<Blob<Dtype> > >& accum_params =
@@ -341,7 +346,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
       const Dtype weight_decay = 0.0, const Dtype momentum = 0.0,
 			const Dtype rms_decay=0.0, const int iter_to_check = 0) {
     // Initialize the solver and run K (= iter_to_check) solver iterations.
-    RunLeastSquaresSolver(learning_rate, weight_decay, momentum, rms_decay, iter_to_check );
+      RunLeastSquaresSolver(learning_rate, weight_decay, momentum, iter_to_check, rms_decay );
 
     // Compute the (K+1)th update using the analytic least squares gradient.
     vector<shared_ptr<Blob<Dtype> > > updated_params;
@@ -350,7 +355,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
 
     // Reinitialize the solver and run K+1 solver iterations.
     RunLeastSquaresSolver(learning_rate, weight_decay, momentum,
-    											rms_decay,iter_to_check + 1);
+                          iter_to_check + 1,rms_decay);
 
     // Check that the solver's solution matches ours.
     CheckLeastSquaresUpdate(updated_params);
@@ -441,9 +446,10 @@ TYPED_TEST(SGDSolverTest, TestLeastSquaresUpdateWithEverythingAccum) {
   const Dtype kLearningRate = 0.01;
   const Dtype kWeightDecay = 0.1;
   const Dtype kMomentum = 0.9;
+  const Dtype kRMSDecay = 0.99;
   const int kNumIters = 4;
   const int kIterSize = 2;
-  this->CheckAccumulation(kLearningRate, kWeightDecay, kMomentum, kNumIters,
+  this->CheckAccumulation(kLearningRate, kWeightDecay, kMomentum, kNumIters, kRMSDecay,
       kIterSize);
 }
 
@@ -496,9 +502,10 @@ TYPED_TEST(AdaGradSolverTest, TestLeastSquaresUpdateWithEverythingAccum) {
   const Dtype kLearningRate = 0.01;
   const Dtype kWeightDecay = 0.1;
   const Dtype kMomentum = 0.0;
+  const Dtype kRMSDecay = 0.99;
   const int kNumIters = 4;
   const int kIterSize = 2;
-  this->CheckAccumulation(kLearningRate, kWeightDecay, kMomentum, kNumIters,
+  this->CheckAccumulation(kLearningRate, kWeightDecay, kMomentum, kNumIters,kRMSDecay,
       kIterSize);
 }
 

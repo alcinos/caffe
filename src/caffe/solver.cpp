@@ -228,12 +228,11 @@ void Solver<Dtype>::Step(int iters) {
           }
           LOG(INFO) << "    Train net output #"
               << score_index++ << ": " << output_name << " = "
-              << result_vec[k] << loss_msg_stream.str();
+                    << result_vec[k] << loss_msg_stream.str();
         }
       }
     }
     ApplyUpdate();
-
     // Increment the internal iter_ counter -- its value should always indicate
     // the number of times the weights have been updated.
     ++iter_;
@@ -712,8 +711,6 @@ void AdaGradSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<float>& net_params_lr = this->net_->params_lr();
   const vector<float>& net_params_weight_decay =
       this->net_->params_weight_decay();
-  // get the learning rate
-  Dtype rate = this->GetLearningRate();
   Dtype delta = this->param_.delta();
   Dtype local_rate = rate * net_params_lr[param_id];
   switch (Caffe::mode()) {
@@ -787,16 +784,21 @@ void AdaGradSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
     LOG(FATAL) << "Unknown caffe mode: " << Caffe::mode();
   }
 }
-
+    
+template<typename Dtype>
+void RMSpropSolver<Dtype>::Regularize(int)
+{
+    //done directly in computeUpdatevalue
+}
+    
 template <typename Dtype>
-void RMSpropSolver<Dtype>::ComputeUpdateValue() {
+void RMSpropSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   const vector<shared_ptr<Blob<Dtype> > >& net_params = this->net_->params();
   const vector<float>& net_params_lr = this->net_->params_lr();
   const vector<float>& net_params_weight_decay =
       this->net_->params_weight_decay();
 
   // get the learning rate
-  Dtype rate = this->GetLearningRate();
   Dtype delta = this->param_.delta();
   Dtype rms_decay = this->param_.rms_decay();
 
@@ -805,12 +807,12 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
   }
   Dtype weight_decay = this->param_.weight_decay();
   string regularization_type = this->param_.regularization_type();
+  Dtype local_rate,local_decay;
   switch (Caffe::mode()) {
   case Caffe::CPU:
-    for (int param_id = 0; param_id < net_params.size(); ++param_id) {
-      Dtype local_rate = rate * net_params_lr[param_id];
-      Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
-
+      local_rate = rate * net_params_lr[param_id];
+      local_decay = weight_decay * net_params_weight_decay[param_id];
+      
       if (local_decay) {
         if (regularization_type == "L2") {
           // add weight decay
@@ -834,40 +836,38 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
       //Compute RMSstep
       // compute square of gradient in update
       caffe_powx(net_params[param_id]->count(),
-      		net_params[param_id]->cpu_diff(), Dtype(2),
-					this->update_[param_id]->mutable_cpu_data());
+                 net_params[param_id]->cpu_diff(), Dtype(2),
+                 this->update_[param_id]->mutable_cpu_data());
 
       // update history
       caffe_cpu_axpby(net_params[param_id] -> count(),
-      		Dtype(1-rms_decay), this->update_[param_id]->cpu_data(),
-					rms_decay, this->history_[param_id]-> mutable_cpu_data());
+                      Dtype(1-rms_decay), this->update_[param_id]->cpu_data(),
+                      rms_decay, this->history_[param_id]-> mutable_cpu_data());
 
       // prepare update
       caffe_powx(net_params[param_id]->count(),
-      		this->history_[param_id]->cpu_data(), Dtype(0.5),
-					this->update_[param_id]->mutable_cpu_data());
+                 this->history_[param_id]->cpu_data(), Dtype(0.5),
+                 this->update_[param_id]->mutable_cpu_data());
 
 
       caffe_add_scalar(net_params[param_id]->count(),
-      		delta, this->update_[param_id]->mutable_cpu_data());
+                       delta, this->update_[param_id]->mutable_cpu_data());
 
       caffe_div(net_params[param_id]->count(),
-      		net_params[param_id]->cpu_diff(),
-					this->update_[param_id]->cpu_data(),
-					this->update_[param_id]->mutable_cpu_data());
+                net_params[param_id]->cpu_diff(),
+                this->update_[param_id]->cpu_data(),
+                this->update_[param_id]->mutable_cpu_data());
 
       // scale and copy
-			caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
-					this->update_[param_id]->cpu_data(), Dtype(0),
-					net_params[param_id]->mutable_cpu_diff());
-    }
-    break;
+      caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
+                      this->update_[param_id]->cpu_data(), Dtype(0),
+                      net_params[param_id]->mutable_cpu_diff());
+      break;
   case Caffe::GPU:
 #ifndef CPU_ONLY
-    for (int param_id = 0; param_id < net_params.size(); ++param_id) {
 
-      Dtype local_rate = rate * net_params_lr[param_id];
-      Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
+      local_rate = rate * net_params_lr[param_id];
+      local_decay = weight_decay * net_params_weight_decay[param_id];
 
       if (local_decay) {
         if (regularization_type == "L2") {
@@ -917,7 +917,6 @@ void RMSpropSolver<Dtype>::ComputeUpdateValue() {
 			caffe_gpu_axpby(net_params[param_id]->count(), local_rate,
 						this->update_[param_id]->gpu_data(), Dtype(0),
 						net_params[param_id]->mutable_gpu_diff());
-    }
 #else
     NO_GPU;
 #endif

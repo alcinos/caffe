@@ -139,8 +139,8 @@ public:
 	      : SGDSolver<Dtype>(param_file) { }
 
 protected:
-	virtual void ComputeUpdateValue();
-
+    virtual void Regularize(int param_id);
+	virtual void ComputeUpdateValue(int param_id, Dtype rate);
 	DISABLE_COPY_AND_ASSIGN(RMSpropSolver);
 };
 
