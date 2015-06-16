@@ -184,11 +184,9 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
           grad += element * weights.cpu_data()[j];
         }
       }
-      cout<<"data ";
       for (int k = 0; k < N; ++k) {
         const Dtype element_i = (i == D) ? 1 : data.cpu_data()[k * D + i];
         grad -= element_i * targets.cpu_data()[k];
-        cout<<element_i<<" "<<targets.cpu_data()[k]<<"    ";
       }
       // Scale the gradient over the N samples.
       grad /= N;
@@ -228,9 +226,6 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
         updated_weights.mutable_cpu_data()[i] =
             weights.cpu_data()[i] - update_value;
       }
-      cout<<"grad"<<grad<<endl;
-      cout<<"update "<<update_value<<endl;
-      //throw 2;
     }
   }
 
@@ -250,10 +245,6 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
     ASSERT_EQ(D, solver_updated_weights.count());
     const double kPrecision = 1e-2;
     const double kMinPrecision = 1e-7;
-    for (int i = 0; i < D; ++i) {
-        cout<<updated_weights.cpu_data()[i]<<" "<<solver_updated_weights.cpu_data()[i]<<endl;
-    }
-    //throw 2;
     for (int i = 0; i < D; ++i) {
       const Dtype expected_updated_weight = updated_weights.cpu_data()[i];
       const Dtype solver_updated_weight = solver_updated_weights.cpu_data()[i];
