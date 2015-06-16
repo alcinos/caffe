@@ -232,9 +232,8 @@ class ConvolutionLayerFFT : public ConvolutionLayer<Dtype> {
       const vector<Blob<Dtype>*>& top);
   virtual  ~ConvolutionLayerFFT<Dtype>();
 
-  virtual inline LayerParameter_LayerType type() const {
-    return LayerParameter_LayerType_CONVOLUTION;
-  }
+  virtual inline const char* type() const { return "Convolution"; }
+
   virtual inline int MinBottomBlobs() const { return 1; }
   virtual inline int MinTopBlobs() const { return 1; }
   virtual inline bool EqualNumBottomTopBlobs() const { return true; }

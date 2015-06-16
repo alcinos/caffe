@@ -29,6 +29,11 @@ caffe_option(BUILD_python_layer "Build the caffe python layer" ON)
 include(cmake/Dependencies.cmake)
 
 # ---[ Flags
+if(USE_FFT)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_FFT")
+endif()
+
+
 if(UNIX OR APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
 endif()

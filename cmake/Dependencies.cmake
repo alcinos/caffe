@@ -155,3 +155,10 @@ endif()
 if(BUILD_docs)
   find_package(Doxygen)
 endif()
+
+# ---[ FFTW
+if(USE_FFT)
+  find_package(FFTW REQUIRED)
+  include_directories(SYSTEM ${FFTW_INCLUDES})
+  list(APPEND Caffe_LINKER_LIBS ${FFTW_LIBRARIES})
+endif()
