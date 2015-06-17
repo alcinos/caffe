@@ -387,6 +387,7 @@ void Solver<Dtype>::Restore(const char* state_file) {
   if (state.has_learned_net()) {
     ReadNetParamsFromBinaryFileOrDie(state.learned_net().c_str(), &net_param);
     net_->CopyTrainedLayersFrom(net_param);
+    LOG(INFO) << "Restored net weights";
   }
   iter_ = state.iter();
   current_step_ = state.current_step();
