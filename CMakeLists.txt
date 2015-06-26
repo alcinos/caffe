@@ -30,7 +30,7 @@ include(cmake/Dependencies.cmake)
 
 # ---[ Flags
 if(USE_FFT)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_FFT")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_FFT -fopenmp")
 endif()
 
 

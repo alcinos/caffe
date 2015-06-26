@@ -11,9 +11,10 @@ endif (FFTW_INCLUDES)
 
 find_path (FFTW_INCLUDES fftw3.h)
 find_library (FFTW_LIBRARY NAMES fftw3)
+find_library (FFTW_OMP_LIBRARY NAMES fftw3_omp)
 find_library (FFTWF_LIBRARY NAMES fftw3f)
 find_library (CUFFT_LIBRARY NAMES cufft HINTS /opt/cuda/lib64)
-set(FFTW_LIBRARIES ${FFTW_LIBRARY};${FFTWF_LIBRARY};${CUFFT_LIBRARY})
+set(FFTW_LIBRARIES ${FFTW_LIBRARY};${FFTWF_LIBRARY};${FFTW_OMP_LIBRARY};${CUFFT_LIBRARY})
 
 # handle the QUIETLY and REQUIRED arguments and set FFTW_FOUND to TRUE if
 # all listed variables are TRUE
