@@ -56,15 +56,6 @@ if(NOT HAVE_CUDA)
   add_definitions(-DCPU_ONLY)
 endif()
 
-# ---[ OpenCV
-find_package(OpenCV QUIET COMPONENTS core highgui imgproc imgcodecs)
-if(NOT OpenCV_FOUND) # if not OpenCV 3.x, then imgcodecs are not found
-  find_package(OpenCV REQUIRED COMPONENTS core highgui imgproc)
-endif()
-include_directories(SYSTEM ${OpenCV_INCLUDE_DIRS})
-list(APPEND Caffe_LINKER_LIBS ${OpenCV_LIBS})
-message(STATUS "OpenCV found (${OpenCV_CONFIG_PATH})")
-
 # ---[ BLAS
 if(NOT APPLE)
   set(BLAS "open" CACHE STRING "Selected BLAS library")

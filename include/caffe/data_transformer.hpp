@@ -60,8 +60,6 @@ class DataTransformer {
    *    This is destination blob. It can be part of top blob's data if
    *    set_cpu_data() is used. See memory_layer.cpp for an example.
    */
-  void Transform(const vector<cv::Mat> & mat_vector,
-                Blob<Dtype>* transformed_blob);
 
   /**
    * @brief Applies the transformation defined in the data layer's
@@ -73,7 +71,6 @@ class DataTransformer {
    *    This is destination blob. It can be part of top blob's data if
    *    set_cpu_data() is used. See image_data_layer.cpp for an example.
    */
-  void Transform(const cv::Mat& cv_img, Blob<Dtype>* transformed_blob);
 
   /**
    * @brief Applies the same transformation defined in the data layer's
@@ -113,7 +110,6 @@ class DataTransformer {
    * @param mat_vector
    *    A vector of Mat containing the data to be transformed.
    */
-  vector<int> InferBlobShape(const vector<cv::Mat> & mat_vector);
   /**
    * @brief Infers the shape of transformed_blob will have when
    *    the transformation is applied to the data.
@@ -121,7 +117,6 @@ class DataTransformer {
    * @param cv_img
    *    cv::Mat containing the data to be transformed.
    */
-  vector<int> InferBlobShape(const cv::Mat& cv_img);
 
  protected:
    /**
