@@ -1,4 +1,3 @@
-#include <opencv2/core/core.hpp>
 
 #include <fstream>  // NOLINT(readability/streams)
 #include <iostream>  // NOLINT(readability/streams)
@@ -60,24 +59,6 @@ void ImageDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     lines_id_ = skip;
   }
   // Read an image, and use it to initialize the top blob.
-  cv::Mat cv_img = ReadImageToCVMat(root_folder + lines_[lines_id_].first,
-                                    new_height, new_width, is_color);
-  // Use data_transformer to infer the expected blob shape from a cv_image.
-  vector<int> top_shape = this->data_transformer_->InferBlobShape(cv_img);
-  this->transformed_data_.Reshape(top_shape);
-  // Reshape prefetch_data and top[0] according to the batch_size.
-  const int batch_size = this->layer_param_.image_data_param().batch_size();
-  top_shape[0] = batch_size;
-  this->prefetch_data_.Reshape(top_shape);
-  top[0]->ReshapeLike(this->prefetch_data_);
-
-  LOG(INFO) << "output data size: " << top[0]->num() << ","
-      << top[0]->channels() << "," << top[0]->height() << ","
-      << top[0]->width();
-  // label
-  vector<int> label_shape(1, batch_size);
-  top[1]->Reshape(label_shape);
-  this->prefetch_label_.Reshape(label_shape);
 }
 
 template <typename Dtype>
@@ -104,53 +85,6 @@ void ImageDataLayer<Dtype>::InternalThreadEntry() {
   const bool is_color = image_data_param.is_color();
   string root_folder = image_data_param.root_folder();
 
-  // Reshape according to the first image of each batch
-  // on single input batches allows for inputs of varying dimension.
-  cv::Mat cv_img = ReadImageToCVMat(root_folder + lines_[lines_id_].first,
-      new_height, new_width, is_color);
-  // Use data_transformer to infer the expected blob shape from a cv_img.
-  vector<int> top_shape = this->data_transformer_->InferBlobShape(cv_img);
-  this->transformed_data_.Reshape(top_shape);
-  // Reshape prefetch_data according to the batch_size.
-  top_shape[0] = batch_size;
-  this->prefetch_data_.Reshape(top_shape);
-
-  Dtype* prefetch_data = this->prefetch_data_.mutable_cpu_data();
-  Dtype* prefetch_label = this->prefetch_label_.mutable_cpu_data();
-
-  // datum scales
-  const int lines_size = lines_.size();
-  for (int item_id = 0; item_id < batch_size; ++item_id) {
-    // get a blob
-    timer.Start();
-    CHECK_GT(lines_size, lines_id_);
-    cv::Mat cv_img = ReadImageToCVMat(root_folder + lines_[lines_id_].first,
-        new_height, new_width, is_color);
-    CHECK(cv_img.data) << "Could not load " << lines_[lines_id_].first;
-    read_time += timer.MicroSeconds();
-    timer.Start();
-    // Apply transformations (mirror, crop...) to the image
-    int offset = this->prefetch_data_.offset(item_id);
-    this->transformed_data_.set_cpu_data(prefetch_data + offset);
-    this->data_transformer_->Transform(cv_img, &(this->transformed_data_));
-    trans_time += timer.MicroSeconds();
-
-    prefetch_label[item_id] = lines_[lines_id_].second;
-    // go to the next iter
-    lines_id_++;
-    if (lines_id_ >= lines_size) {
-      // We have reached the end. Restart from the first.
-      DLOG(INFO) << "Restarting data prefetching from start.";
-      lines_id_ = 0;
-      if (this->layer_param_.image_data_param().shuffle()) {
-        ShuffleImages();
-      }
-    }
-  }
-  batch_timer.Stop();
-  DLOG(INFO) << "Prefetch batch: " << batch_timer.MilliSeconds() << " ms.";
-  DLOG(INFO) << "     Read time: " << read_time / 1000 << " ms.";
-  DLOG(INFO) << "Transform time: " << trans_time / 1000 << " ms.";
 }
 
 INSTANTIATE_CLASS(ImageDataLayer);
