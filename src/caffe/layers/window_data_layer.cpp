@@ -6,10 +6,6 @@
 #include <utility>
 #include <vector>
 
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-
 #include "caffe/common.hpp"
 #include "caffe/data_layers.hpp"
 #include "caffe/layer.hpp"
